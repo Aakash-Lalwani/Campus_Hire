@@ -1,155 +1,214 @@
-# CampusHire — Modern Campus Placement & Recruitment SaaS Platform
+# CampusHire
 
-CampusHire is a full-stack campus placement and recruitment operations platform that digitizes the end-to-end recruitment lifecycle — student registration, recruiter management, drive posting, 5-condition automated eligibility evaluation, ATS candidate pipeline tracking, and interview scheduling — built with a Spring Boot 3 + React 18 architecture.
+A full-stack campus placement management portal for managing students, companies, job drives, applications, eligibility, and interviews.
 
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Frontend** | React 18, Vite 5, React Router 6, Axios, Recharts, Lucide Icons, Vanilla CSS |
-| **Backend** | Java 21, Spring Boot 3.3.4, Spring Web, Spring Data JPA, Hibernate 6, Bean Validation |
-| **Database** | MySQL 8.x / Docker MySQL 8 |
-| **Migration** | Flyway Community 10.x |
-| **Infrastructure** | Docker Compose, Multi-stage Dockerfiles, Nginx Reverse Proxy |
+![Java](https://img.shields.io/badge/Java-21-ED8B00?style=for-the-badge&logo=openjdk&logoColor=white)
+![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.3.4-6DB33F?style=for-the-badge&logo=springboot&logoColor=white)
+![React](https://img.shields.io/badge/React-18-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![MySQL](https://img.shields.io/badge/MySQL-8.0-4479A1?style=for-the-badge&logo=mysql&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-Supported-2496ED?style=for-the-badge&logo=docker&logoColor=white)
 
 ---
 
-## System Architecture
+## 📸 Screenshots
 
-```
-React (Vite :5173 / Nginx :80)
-      │
-      │ HTTP / REST API (/api)
-      ▼
-Spring Boot Controller Layer (:8080)
-      │
-      │ DTOs & Bean Validation
-      ▼
-Spring @Service Layer (Transactions & Business Rules)
-      │
-      │ Spring Data JPA
-      ▼
-Hibernate 6 (ddl-auto: validate)
-      │
-      │ JDBC
-      ▼
-MySQL 8 (Automated Flyway Migrations: V1 Schema, V2 Seed)
-```
+### Dashboard
+Overview of placement numbers, branch statistics, company applications, and salary packages.
+
+![CampusHire Dashboard](docs/screenshots/dashboard.png)
+
+---
+
+### Students
+List of registered students with their CGPA, department, backlogs, and current placement status.
+
+![CampusHire Students](docs/screenshots/students.png)
+
+---
+
+### Jobs
+Placement drives posted by companies with salary packages, cutoff criteria, and deadlines.
+
+![CampusHire Jobs](docs/screenshots/jobs.png)
+
+---
+
+### Applications
+Applicant tracking system showing student progress across interview stages.
+
+![CampusHire Applications](docs/screenshots/applications.png)
+
+---
+
+### Interviews
+Interview schedule with rounds, mode (Online/Offline), panel interviewers, and pass/fail results.
+
+![CampusHire Interviews](docs/screenshots/interviews.png)
+
+---
+
+### Student Portal
+A dedicated portal where students can check which jobs they can apply for and track their applications.
+
+![CampusHire Student Portal](docs/screenshots/student-portal.png)
+
+---
+
+## What is CampusHire?
+
+CampusHire is a web application made for colleges and universities.
+
+It helps the placement cell run recruitment drives smoothly by keeping everything in one place:
+- College coordinators can manage students, recruiting companies, job openings, and interview rounds.
+- Students have their own portal where they can see matching jobs, check if they meet the requirements, and apply with one click.
+- The system automatically checks if a student is eligible before letting them apply.
 
 ---
 
 ## Key Features
 
-1. **Executive Placement Dashboard**: Real-time KPI metrics (Students, Companies, Open Jobs, Applications, Placed, Placement Rate), department placement charts, application distribution by recruiter, and 4-tier compensation distribution (`< 5 LPA`, `5–10 LPA`, `10–20 LPA`, `> 20 LPA`).
-2. **Student Directory**: Student roster with CGPA badges, active backlogs monitoring, department filters, and placement status tracking.
-3. **Partner Recruiters**: Corporate recruiter management, representative contact details, locations, and verified external links.
-4. **Placement Drives & Job Postings**: Role announcements, compensation (LPA), minimum CGPA cutoffs, max backlog limits, and live application deadlines.
-5. **Interactive Eligibility Engine**: Automated 5-rule evaluation engine checking CGPA cutoffs, backlog thresholds, department matching, deadline validity, and duplicate application prevention with exact failure reasons.
-6. **Applicant Tracking System (ATS)**: Multi-stage candidate progression pipeline (`APPLIED → SHORTLISTED → APTITUDE → TECHNICAL → HR → SELECTED`), with terminal `REJECTED` handling and automatic student placement status synchronization upon final selection.
-7. **Interview Management**: Multi-round interview tracking (Aptitude, Technical, HR), panel interviewer assignments, modality (Online/In-Person), and one-click `Pass`/`Fail` evaluation.
-8. **Student Portal**: Candidate self-service portal with profile overview, live drive eligibility evaluation, instant `Apply Now` action, and application/interview schedule tracker.
+| Feature | What it does |
+|---|---|
+| **Student Management** | Add, edit, search, and view student academic details and placement status |
+| **Company Management** | Keep track of recruiting companies, locations, contacts, and websites |
+| **Job Drives** | Create job openings with salary packages, allowed branches, and cutoffs |
+| **Eligibility Checker** | Checks CGPA, backlogs, branch, and deadline before allowing applications |
+| **Applications (ATS)** | Track each candidate through stages from Applied to Selected |
+| **Interviews** | Schedule interview rounds and record pass or fail results |
+| **Student Portal** | Students can view matching jobs, see eligibility reasons, and track progress |
+| **Placement Tracking** | Updates a student to "Placed" automatically when they are selected |
 
 ---
 
-## Getting Started
+## Tech Stack
 
-### Prerequisites
+### Frontend (Website)
+- **React 18** — A modern JavaScript library used to build fast user interfaces.
+- **Vite** — A tool that builds and runs the React frontend quickly.
+- **Axios** — Used by React to send HTTP requests to the backend.
+- **Recharts** — Creates the charts on the dashboard.
 
-- **Java**: 21 LTS
-- **Maven**: 3.9+
-- **Node.js**: 18+ and npm
-- **Database**: MySQL 8+ or Docker
+### Backend (Server)
+- **Java 21** — The core programming language for the backend.
+- **Spring Boot 3** — The main framework that runs the server and handles business logic.
+- **REST APIs** — How the frontend communicates with the backend using JSON.
+- **Spring Data JPA & Hibernate** — Helps Java code read and save data in MySQL without writing manual SQL queries.
+
+### Database (Storage)
+- **MySQL 8** — The database that securely stores all student, company, and job data.
+- **Flyway** — Manages database migrations automatically on startup so tables are always ready.
+
+### DevOps & Deployment
+- **Docker & Docker Compose** — Packages the frontend, backend, and database into containers so the app can run anywhere.
+- **Nginx** — Serves the frontend and forwards API calls to the backend.
 
 ---
 
-### Environment Configuration
+## How It Works
 
-A template configuration file is provided at `.env.example`:
+Here is how data flows through CampusHire:
 
-```bash
-cp .env.example .env
+```text
+React Frontend (Browser)
+       │
+       ▼  Sends HTTP / REST API requests
+Spring Boot Controllers
+       │
+       ▼  Validates inputs & runs business rules
+Service Layer (Eligibility & Placement Rules)
+       │
+       ▼  JPA / Hibernate manages database queries
+MySQL 8 Database (Managed by Flyway)
 ```
 
-| Variable | Description | Default |
-|---|---|---|
-| `SPRING_PROFILES_ACTIVE` | Active Spring profile (`dev`, `prod`) | `dev` |
-| `SPRING_DATASOURCE_URL` | MySQL JDBC Connection URL | `jdbc:mysql://localhost:3306/campushire` |
-| `SPRING_DATASOURCE_USERNAME` | MySQL Username | `root` |
-| `SPRING_DATASOURCE_PASSWORD` | MySQL Password | *(empty or configured)* |
-| `SERVER_PORT` | Backend HTTP Port | `8080` |
-| `VITE_API_BASE_URL` | Frontend API Base URL | `/api` |
-| `CORS_ALLOWED_ORIGINS` | Allowed CORS Origins | `http://localhost:5173,http://localhost:3000` |
+1. **User clicks an action**: For example, a student clicks **Apply Now** on a job.
+2. **Frontend calls the API**: React sends a request to `/api/applications/apply`.
+3. **Backend checks the rules**: The Spring Boot service checks if the student's CGPA is high enough, if they have too many backlogs, if their branch is allowed, and if the deadline has passed.
+4. **Data is saved**: If eligible, Hibernate saves the new application into MySQL.
+5. **Screen updates**: React receives the confirmation and updates the screen instantly.
 
 ---
 
-### Database & Flyway Migrations
+## Project Structure
 
-Flyway automatically applies all schema and seed migrations on application startup:
-- `V1__init_schema.sql`: Tables for `students`, `companies`, `jobs`, `applications`, and `interviews`.
-- `V2__seed_demo_data.sql`: Production demo seed with 15 candidates, 6 companies, 9 jobs, 20 applications, and 12 interview rounds.
+```text
+Campus_Hire/
+├── backend/                  # Spring Boot 3 Java backend
+│   ├── src/main/java/        # Controllers, Services, Entities, and Repositories
+│   └── src/main/resources/   # Application settings and Flyway SQL migration files
+├── frontend/                 # React 18 frontend built with Vite
+│   ├── src/components/       # Reusable UI elements (cards, badges, modals, tables)
+│   └── src/pages/            # Dashboard, Students, Companies, Jobs, Portal pages
+├── docs/                     # Project documentation
+│   └── screenshots/          # Real application screenshots used in this README
+├── docker-compose.yml        # Multi-container setup for MySQL, Backend, and Frontend
+├── .env.example              # Example environment settings
+├── README.md                 # Project documentation
+└── .gitignore                # Prevents temporary and build files from being committed
+```
 
-Manual database creation (if running standalone MySQL):
+- `backend/` contains all Java code, business services, and database migration scripts.
+- `frontend/` contains the React user interface, pages, styles, and API clients.
+- `docs/screenshots/` contains real screenshots of the running application.
 
+---
+
+## Run Locally
+
+### Option 1 — Using Docker (Recommended)
+
+Docker runs the entire stack (MySQL, Backend, and Frontend) in one step:
+
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/Aakash-Lalwani/Campus_Hire.git
+   cd Campus_Hire
+   ```
+
+2. **Create your environment file**:
+   ```bash
+   cp .env.example .env
+   ```
+
+3. **Start the application**:
+   ```bash
+   docker compose up --build
+   ```
+
+4. **Open in your browser**:
+   - **Frontend**: [http://localhost:5173](http://localhost:5173) (or `http://localhost`)
+   - **Backend API**: [http://localhost:8080/api](http://localhost:8080/api)
+
+---
+
+### Option 2 — Without Docker
+
+#### Step 1: Start MySQL
+Make sure MySQL 8 is running locally and create a database named `campushire`:
 ```sql
-CREATE DATABASE campushire CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE campushire;
 ```
 
----
-
-### Running the Application Locally
-
-#### 1. Start the Backend
-
+#### Step 2: Run Backend
 ```bash
 cd backend
 mvn clean test
 mvn spring-boot:run
 ```
+*Flyway will automatically create all tables and insert sample demo data on first start.*
 
-The Spring Boot backend will start on `http://localhost:8080`.
-
-#### 2. Start the Frontend
-
+#### Step 3: Run Frontend
+In a new terminal window:
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-The Vite development server will start on `http://localhost:5173` and automatically proxy `/api` requests to `http://localhost:8080`.
+Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---
 
-### Running with Docker Compose
+## Author
 
-To launch the complete multi-container stack (MySQL 8, Spring Boot JAR, and React/Nginx):
-
-```bash
-docker compose up --build
-```
-
-- **Frontend Application**: `http://localhost`
-- **Backend API**: `http://localhost:8080/api`
-- **MySQL Database**: `localhost:3306`
-
----
-
-### Production Verification
-
-Run the automated test suite and production bundle build:
-
-```bash
-# Backend test suite (36 unit, integration, and Flyway tests)
-cd backend && mvn test
-
-# Frontend production bundle
-cd frontend && npm run build
-```
-
----
-
-## License
-
-This project is licensed under the MIT License.
+**Aakash Lalwani** — [GitHub Profile](https://github.com/Aakash-Lalwani)
