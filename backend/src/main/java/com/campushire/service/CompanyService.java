@@ -1,49 +1,78 @@
 package com.campushire.service;
 
-import com.campushire.dao.CompanyDAO;
+import com.campushire.dto.CompanyRequestDTO;
+import com.campushire.dto.CompanyResponseDTO;
+import com.campushire.entity.Company;
 import com.campushire.exception.ResourceNotFoundException;
-import com.campushire.exception.ValidationException;
-import com.campushire.model.Company;
+import com.campushire.repository.CompanyRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLException;
 import java.util.List;
 
+@Service
+@Transactional(readOnly = true)
 public class CompanyService {
-    private final CompanyDAO companyDAO = new CompanyDAO();
 
-    public List<Company> getAllCompanies(String search) throws SQLException {
-        return companyDAO.findAll(search);
+    private final CompanyRepository companyRepository;
+
+    @Autowired
+    public CompanyService(CompanyRepository companyRepository) {
+        this.companyRepository = companyRepository;
     }
 
-    public Company getCompanyById(Long id) throws SQLException {
-        return companyDAO.findById(id)
+    public List<CompanyResponseDTO> getAllCompanies(String search) {
+        List<Company> companies = companyRepository.searchCompanies(search);
+        return companies.stream()
+                .map(CompanyResponseDTO::new)
+                .toList();
+    }
+
+    public CompanyResponseDTO getCompanyById(Long id) {
+        Company company = findEntityById(id);
+        return new CompanyResponseDTO(company);
+    }
+
+    public Company findEntityById(Long id) {
+        return companyRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Company with ID " + id + " not found"));
     }
 
-    public Company createCompany(Company company) throws SQLException {
-        validateCompany(company);
-        return companyDAO.create(company);
+    @Transactional
+    public CompanyResponseDTO createCompany(CompanyRequestDTO dto) {
+        Company company = new Company(
+                null,
+                dto.getName(),
+                dto.getIndustry(),
+                dto.getLocation(),
+                dto.getWebsite(),
+                dto.getContactPerson(),
+                dto.getContactEmail()
+        );
+
+        Company saved = companyRepository.save(company);
+        return new CompanyResponseDTO(saved);
     }
 
-    public Company updateCompany(Long id, Company company) throws SQLException {
-        getCompanyById(id);
-        company.setId(id);
-        validateCompany(company);
-        companyDAO.update(company);
-        return company;
+    @Transactional
+    public CompanyResponseDTO updateCompany(Long id, CompanyRequestDTO dto) {
+        Company company = findEntityById(id);
+
+        company.setName(dto.getName());
+        company.setIndustry(dto.getIndustry());
+        company.setLocation(dto.getLocation());
+        company.setWebsite(dto.getWebsite());
+        company.setContactPerson(dto.getContactPerson());
+        company.setContactEmail(dto.getContactEmail());
+
+        Company updated = companyRepository.save(company);
+        return new CompanyResponseDTO(updated);
     }
 
-    public void deleteCompany(Long id) throws SQLException {
-        getCompanyById(id);
-        companyDAO.delete(id);
-    }
-
-    private void validateCompany(Company c) {
-        if (c.getName() == null || c.getName().isBlank()) {
-            throw new ValidationException("Company name is required");
-        }
-        if (c.getContactEmail() != null && !c.getContactEmail().isBlank() && !c.getContactEmail().contains("@")) {
-            throw new ValidationException("Contact email must be valid");
-        }
+    @Transactional
+    public void deleteCompany(Long id) {
+        Company company = findEntityById(id);
+        companyRepository.delete(company);
     }
 }

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = 'http://localhost:8081/api/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const client = axios.create({
   baseURL: API_BASE_URL,
@@ -18,10 +18,32 @@ client.interceptors.response.use(
     return { success: true, data: response.data };
   },
   (error) => {
-    const errorRes = error.response?.data || {
+    let errorData = error.response?.data;
+    if (typeof errorData === 'string') {
+      try {
+        errorData = JSON.parse(errorData);
+      } catch {
+        errorData = { message: errorData };
+      }
+    }
+
+    const status = error.response?.status;
+    const defaultErrorCode = status === 404
+      ? 'RESOURCE_NOT_FOUND'
+      : status === 409
+        ? 'DUPLICATE_APPLICATION'
+        : status === 400
+          ? 'VALIDATION_ERROR'
+          : status === 500
+            ? 'INTERNAL_ERROR'
+            : 'NETWORK_ERROR';
+
+    const errorRes = {
       success: false,
-      message: error.message || 'An unexpected network error occurred',
-      errorCode: 'NETWORK_ERROR',
+      status: status || 0,
+      message: errorData?.message || errorData?.error || error.message || 'An unexpected network error occurred',
+      errorCode: errorData?.errorCode || defaultErrorCode,
+      data: errorData?.data || null,
     };
     return Promise.reject(errorRes);
   }
@@ -65,6 +87,7 @@ export const interviewsApi = {
   getById: (id) => client.get(`/interviews/${id}`),
   schedule: (data) => client.post('/interviews', data),
   update: (id, data) => client.put(`/interviews/${id}`, data),
+  updateResult: (id, data) => client.put(`/interviews/${id}/result`, data),
   delete: (id) => client.delete(`/interviews/${id}`),
 };
 
@@ -73,6 +96,10 @@ export const dashboardApi = {
   getPlacementsByBranch: () => client.get('/dashboard/placements-by-branch'),
   getApplicationsByCompany: () => client.get('/dashboard/applications-by-company'),
   getPackageDistribution: () => client.get('/dashboard/package-distribution'),
+};
+
+export const healthApi = {
+  check: () => client.get('/health'),
 };
 
 export default client;

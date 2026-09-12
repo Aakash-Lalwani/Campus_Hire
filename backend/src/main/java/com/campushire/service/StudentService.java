@@ -1,75 +1,108 @@
 package com.campushire.service;
 
-import com.campushire.dao.StudentDAO;
+import com.campushire.dto.StudentRequestDTO;
+import com.campushire.dto.StudentResponseDTO;
+import com.campushire.entity.Student;
+import com.campushire.enums.PlacementStatus;
 import com.campushire.exception.BusinessConflictException;
 import com.campushire.exception.ResourceNotFoundException;
-import com.campushire.exception.ValidationException;
-import com.campushire.model.Student;
+import com.campushire.repository.StudentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLException;
 import java.util.List;
-import java.util.Optional;
 
+@Service
+@Transactional(readOnly = true)
 public class StudentService {
-    private final StudentDAO studentDAO = new StudentDAO();
 
-    public List<Student> getAllStudents(String search, String branch, String status) throws SQLException {
-        return studentDAO.findAll(search, branch, status);
+    private final StudentRepository studentRepository;
+
+    @Autowired
+    public StudentService(StudentRepository studentRepository) {
+        this.studentRepository = studentRepository;
     }
 
-    public Student getStudentById(Long id) throws SQLException {
-        return studentDAO.findById(id)
+    public List<StudentResponseDTO> getAllStudents(String search, String branch, String status) {
+        PlacementStatus placementStatus = null;
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+            placementStatus = PlacementStatus.fromString(status);
+        }
+
+        List<Student> students = studentRepository.searchStudents(search, branch, placementStatus);
+        return students.stream()
+                .map(StudentResponseDTO::new)
+                .toList();
+    }
+
+    public StudentResponseDTO getStudentById(Long id) {
+        Student student = findEntityById(id);
+        return new StudentResponseDTO(student);
+    }
+
+    public Student findEntityById(Long id) {
+        return studentRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Student with ID " + id + " not found"));
     }
 
-    public Student createStudent(Student student) throws SQLException {
-        validateStudent(student);
-
-        Optional<Student> existing = studentDAO.findByEmail(student.getEmail());
-        if (existing.isPresent()) {
-            throw new BusinessConflictException("Student with email '" + student.getEmail() + "' already exists", "DUPLICATE_EMAIL");
+    @Transactional
+    public StudentResponseDTO createStudent(StudentRequestDTO dto) {
+        if (studentRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessConflictException("Student with email '" + dto.getEmail() + "' already exists", "DUPLICATE_EMAIL");
         }
 
-        return studentDAO.create(student);
+        Student student = new Student(
+                null,
+                dto.getName(),
+                dto.getEmail(),
+                dto.getPhone(),
+                dto.getBranch(),
+                dto.getCgpa(),
+                dto.getGraduationYear(),
+                dto.getBacklogs(),
+                dto.getSkills(),
+                dto.getPlacementStatus() != null ? dto.getPlacementStatus() : PlacementStatus.NOT_PLACED
+        );
+
+        Student saved = studentRepository.save(student);
+        return new StudentResponseDTO(saved);
     }
 
-    public Student updateStudent(Long id, Student student) throws SQLException {
-        getStudentById(id); // Ensures student exists
-        student.setId(id);
-        validateStudent(student);
+    @Transactional
+    public StudentResponseDTO updateStudent(Long id, StudentRequestDTO dto) {
+        Student student = findEntityById(id);
 
-        Optional<Student> existing = studentDAO.findByEmail(student.getEmail());
-        if (existing.isPresent() && !existing.get().getId().equals(id)) {
-            throw new BusinessConflictException("Student with email '" + student.getEmail() + "' already exists", "DUPLICATE_EMAIL");
+        if (!student.getEmail().equalsIgnoreCase(dto.getEmail()) && studentRepository.existsByEmail(dto.getEmail())) {
+            throw new BusinessConflictException("Student with email '" + dto.getEmail() + "' already exists", "DUPLICATE_EMAIL");
         }
 
-        studentDAO.update(student);
-        return student;
+        student.setName(dto.getName());
+        student.setEmail(dto.getEmail());
+        student.setPhone(dto.getPhone());
+        student.setBranch(dto.getBranch());
+        student.setCgpa(dto.getCgpa());
+        student.setGraduationYear(dto.getGraduationYear());
+        student.setBacklogs(dto.getBacklogs());
+        student.setSkills(dto.getSkills());
+        if (dto.getPlacementStatus() != null) {
+            student.setPlacementStatus(dto.getPlacementStatus());
+        }
+
+        Student updated = studentRepository.save(student);
+        return new StudentResponseDTO(updated);
     }
 
-    public void deleteStudent(Long id) throws SQLException {
-        getStudentById(id);
-        studentDAO.delete(id);
+    @Transactional
+    public void deleteStudent(Long id) {
+        Student student = findEntityById(id);
+        studentRepository.delete(student);
     }
 
-    private void validateStudent(Student s) {
-        if (s.getName() == null || s.getName().isBlank()) {
-            throw new ValidationException("Student name is required");
-        }
-        if (s.getEmail() == null || s.getEmail().isBlank() || !s.getEmail().contains("@")) {
-            throw new ValidationException("Valid email address is required");
-        }
-        if (s.getBranch() == null || s.getBranch().isBlank()) {
-            throw new ValidationException("Branch is required");
-        }
-        if (s.getCgpa() == null || s.getCgpa() < 0.0 || s.getCgpa() > 10.0) {
-            throw new ValidationException("CGPA must be between 0.0 and 10.0");
-        }
-        if (s.getGraduationYear() == null || s.getGraduationYear() < 2020) {
-            throw new ValidationException("Valid graduation year is required");
-        }
-        if (s.getBacklogs() == null || s.getBacklogs() < 0) {
-            throw new ValidationException("Backlogs cannot be negative");
-        }
+    @Transactional
+    public void updatePlacementStatus(Long studentId, PlacementStatus status) {
+        Student student = findEntityById(studentId);
+        student.setPlacementStatus(status);
+        studentRepository.save(student);
     }
 }

@@ -1,0 +1,23 @@
+# Git
+.git
+.gitignore
+
+# IDE & Editor
+.idea
+.vscode
+*.swp
+*.iml
+
+# Node / Frontend
+**/node_modules
+**/dist
+**/.vite
+
+# Java / Maven
+**/target
+**/.m2
+
+# Logs & Temporary
+*.log
+.tempmediaStorage
+scratch/

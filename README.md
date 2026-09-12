@@ -1,93 +1,55 @@
-# CampusHire
+# CampusHire — Modern Campus Placement & Recruitment SaaS Platform
 
-A full-stack campus placement management system that digitizes the end-to-end placement process — from student registration to company drives and offer tracking — built on a modern Spring Boot + React architecture.
+CampusHire is a full-stack campus placement and recruitment operations platform that digitizes the end-to-end recruitment lifecycle — student registration, recruiter management, drive posting, 5-condition automated eligibility evaluation, ATS candidate pipeline tracking, and interview scheduling — built with a Spring Boot 3 + React 18 architecture.
 
 ---
 
 ## Tech Stack
 
-| Layer      | Technology                              |
-|------------|-----------------------------------------|
-| Frontend   | React.js                                |
-| Backend    | Java 17, Spring Boot, Spring Data JPA   |
-| ORM        | Hibernate (via Spring Data JPA)         |
-| Database   | MySQL 8                                 |
-| Server     | Embedded Tomcat (Spring Boot)           |
+| Layer | Technology |
+|---|---|
+| **Frontend** | React 18, Vite 5, React Router 6, Axios, Recharts, Lucide Icons, Vanilla CSS |
+| **Backend** | Java 21, Spring Boot 3.3.4, Spring Web, Spring Data JPA, Hibernate 6, Bean Validation |
+| **Database** | MySQL 8.x / Docker MySQL 8 |
+| **Migration** | Flyway Community 10.x |
+| **Infrastructure** | Docker Compose, Multi-stage Dockerfiles, Nginx Reverse Proxy |
 
 ---
 
-## Project Structure
+## System Architecture
 
 ```
-CampusHire/
-├── backend/                        # Spring Boot application
-│   ├── src/main/java/com/campushire/
-│   │   ├── controller/             # REST controllers (@RestController)
-│   │   ├── service/                # Business logic layer (@Service)
-│   │   ├── repository/             # JPA repositories (Spring Data)
-│   │   ├── model/                  # JPA entities (@Entity)
-│   │   ├── dto/                    # Data Transfer Objects
-│   │   └── CampusHireApplication.java
-│   ├── src/main/resources/
-│   │   └── application.properties  # DB config, JPA settings, server port
-│   └── pom.xml
-├── frontend/                       # React application
-│   ├── src/
-│   │   ├── components/             # Reusable UI components
-│   │   ├── pages/                  # Student and Admin portal pages
-│   │   ├── services/               # Axios API service calls
-│   │   └── App.jsx
-│   ├── package.json
-│   └── .env                        # API base URL config
-├── database/                       # SQL scripts — schema and seed data
-│   ├── schema.sql
-│   └── seed.sql
-└── docs/                           # Project documentation
+React (Vite :5173 / Nginx :80)
+      │
+      │ HTTP / REST API (/api)
+      ▼
+Spring Boot Controller Layer (:8080)
+      │
+      │ DTOs & Bean Validation
+      ▼
+Spring @Service Layer (Transactions & Business Rules)
+      │
+      │ Spring Data JPA
+      ▼
+Hibernate 6 (ddl-auto: validate)
+      │
+      │ JDBC
+      ▼
+MySQL 8 (Automated Flyway Migrations: V1 Schema, V2 Seed)
 ```
 
 ---
 
-## Features
+## Key Features
 
-### Student Portal
-- Register and log in with secure authentication
-- Build a placement profile: branch, CGPA, skills, and resume link
-- Browse available company drives with eligibility details
-- Apply to drives directly through the portal
-- Track application stage and status in real time
-
-### Admin Portal
-- Secure admin login and dashboard
-- Add, update, and remove companies (package, role, location, eligibility criteria)
-- Create and manage placement drives per company
-- View all applicants for a drive with sortable and filterable lists
-- Update application status and advance candidates through hiring stages
-
----
-
-## How It Works
-
-```
-React Frontend (port 3000)
-        │
-        │  HTTP/JSON (Axios)
-        ▼
-Spring Boot Embedded Server (port 8080)
-        │
-        │  @RestController — request mapping, input validation, response serialization
-        ▼
-@Service Layer — business logic, authorization rules, workflow orchestration
-        │
-        │  Spring Data JPA
-        ▼
-JPA Repositories + Hibernate ORM
-        │
-        │  JDBC (managed by Hibernate)
-        ▼
-MySQL Database
-```
-
-The React frontend communicates with the backend over HTTP using Axios. Spring Boot's embedded server handles incoming requests and routes them to the appropriate `@RestController`. Controllers delegate business logic to `@Service` classes, which interact with the database through Spring Data JPA repositories backed by Hibernate.
+1. **Executive Placement Dashboard**: Real-time KPI metrics (Students, Companies, Open Jobs, Applications, Placed, Placement Rate), department placement charts, application distribution by recruiter, and 4-tier compensation distribution (`< 5 LPA`, `5–10 LPA`, `10–20 LPA`, `> 20 LPA`).
+2. **Student Directory**: Student roster with CGPA badges, active backlogs monitoring, department filters, and placement status tracking.
+3. **Partner Recruiters**: Corporate recruiter management, representative contact details, locations, and verified external links.
+4. **Placement Drives & Job Postings**: Role announcements, compensation (LPA), minimum CGPA cutoffs, max backlog limits, and live application deadlines.
+5. **Interactive Eligibility Engine**: Automated 5-rule evaluation engine checking CGPA cutoffs, backlog thresholds, department matching, deadline validity, and duplicate application prevention with exact failure reasons.
+6. **Applicant Tracking System (ATS)**: Multi-stage candidate progression pipeline (`APPLIED → SHORTLISTED → APTITUDE → TECHNICAL → HR → SELECTED`), with terminal `REJECTED` handling and automatic student placement status synchronization upon final selection.
+7. **Interview Management**: Multi-round interview tracking (Aptitude, Technical, HR), panel interviewer assignments, modality (Online/In-Person), and one-click `Pass`/`Fail` evaluation.
+8. **Student Portal**: Candidate self-service portal with profile overview, live drive eligibility evaluation, instant `Apply Now` action, and application/interview schedule tracker.
 
 ---
 
@@ -95,68 +57,99 @@ The React frontend communicates with the backend over HTTP using Axios. Spring B
 
 ### Prerequisites
 
-- Java 17+
-- Maven 3.8+
-- MySQL 8+
-- Node.js 18+ and npm
+- **Java**: 21 LTS
+- **Maven**: 3.9+
+- **Node.js**: 18+ and npm
+- **Database**: MySQL 8+ or Docker
 
-### Database Setup
+---
 
-Create the database and run the provided scripts:
+### Environment Configuration
+
+A template configuration file is provided at `.env.example`:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Description | Default |
+|---|---|---|
+| `SPRING_PROFILES_ACTIVE` | Active Spring profile (`dev`, `prod`) | `dev` |
+| `SPRING_DATASOURCE_URL` | MySQL JDBC Connection URL | `jdbc:mysql://localhost:3306/campushire` |
+| `SPRING_DATASOURCE_USERNAME` | MySQL Username | `root` |
+| `SPRING_DATASOURCE_PASSWORD` | MySQL Password | *(empty or configured)* |
+| `SERVER_PORT` | Backend HTTP Port | `8080` |
+| `VITE_API_BASE_URL` | Frontend API Base URL | `/api` |
+| `CORS_ALLOWED_ORIGINS` | Allowed CORS Origins | `http://localhost:5173,http://localhost:3000` |
+
+---
+
+### Database & Flyway Migrations
+
+Flyway automatically applies all schema and seed migrations on application startup:
+- `V1__init_schema.sql`: Tables for `students`, `companies`, `jobs`, `applications`, and `interviews`.
+- `V2__seed_demo_data.sql`: Production demo seed with 15 candidates, 6 companies, 9 jobs, 20 applications, and 12 interview rounds.
+
+Manual database creation (if running standalone MySQL):
 
 ```sql
-CREATE DATABASE campushire;
-USE campushire;
-SOURCE database/schema.sql;
-SOURCE database/seed.sql;
+CREATE DATABASE campushire CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### Backend Setup
+---
 
-1. Open `backend/src/main/resources/application.properties` and update the datasource credentials:
+### Running the Application Locally
 
-```properties
-spring.datasource.url=jdbc:mysql://localhost:3306/campushire
-spring.datasource.username=your_mysql_username
-spring.datasource.password=your_mysql_password
-spring.jpa.hibernate.ddl-auto=validate
-spring.jpa.show-sql=true
-```
-
-2. Build and run the Spring Boot application:
+#### 1. Start the Backend
 
 ```bash
 cd backend
-mvn clean install
+mvn clean test
 mvn spring-boot:run
 ```
 
-The API server starts at `http://localhost:8080`.
+The Spring Boot backend will start on `http://localhost:8080`.
 
-### Frontend Setup
+#### 2. Start the Frontend
 
 ```bash
 cd frontend
 npm install
-npm start
+npm run dev
 ```
 
-The React app runs at `http://localhost:3000` and proxies API requests to the Spring Boot backend at `http://localhost:8080`.
+The Vite development server will start on `http://localhost:5173` and automatically proxy `/api` requests to `http://localhost:8080`.
 
 ---
 
-## Database Design
+### Running with Docker Compose
 
-| Table          | Purpose                                                    |
-|----------------|------------------------------------------------------------|
-| `students`     | Student profiles — branch, CGPA, skills, contact info      |
-| `companies`    | Company details — offered role, package, location          |
-| `drives`       | Placement drives linked to a company with eligibility rules |
-| `applications` | Student–drive mapping with status and stage tracking       |
-| `admins`       | Admin credentials and access control                       |
+To launch the complete multi-container stack (MySQL 8, Spring Boot JAR, and React/Nginx):
+
+```bash
+docker compose up --build
+```
+
+- **Frontend Application**: `http://localhost`
+- **Backend API**: `http://localhost:8080/api`
+- **MySQL Database**: `localhost:3306`
 
 ---
 
-## Author
+### Production Verification
 
-**Aakash Lalwani**
+Run the automated test suite and production bundle build:
+
+```bash
+# Backend test suite (36 unit, integration, and Flyway tests)
+cd backend && mvn test
+
+# Frontend production bundle
+cd frontend && npm run build
+```
+
+---
+
+## License
+
+This project is licensed under the MIT License.

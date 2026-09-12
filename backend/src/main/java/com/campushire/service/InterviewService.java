@@ -1,91 +1,118 @@
 package com.campushire.service;
 
-import com.campushire.dao.ApplicationDAO;
-import com.campushire.dao.InterviewDAO;
+import com.campushire.dto.InterviewRequestDTO;
+import com.campushire.dto.InterviewResponseDTO;
+import com.campushire.entity.Application;
+import com.campushire.entity.Interview;
 import com.campushire.enums.ApplicationStatus;
 import com.campushire.enums.InterviewResult;
 import com.campushire.enums.InterviewRound;
-import com.campushire.enums.PlacementStatus;
 import com.campushire.exception.ResourceNotFoundException;
 import com.campushire.exception.ValidationException;
-import com.campushire.model.Application;
-import com.campushire.model.Interview;
+import com.campushire.repository.ApplicationRepository;
+import com.campushire.repository.InterviewRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLException;
 import java.util.List;
 
+@Service
+@Transactional(readOnly = true)
 public class InterviewService {
-    private final InterviewDAO interviewDAO = new InterviewDAO();
-    private final ApplicationDAO applicationDAO = new ApplicationDAO();
-    private final ApplicationService applicationService = new ApplicationService();
 
-    public List<Interview> getAllInterviews(Long applicationId, String result) throws SQLException {
-        return interviewDAO.findAll(applicationId, result);
+    private final InterviewRepository interviewRepository;
+    private final ApplicationRepository applicationRepository;
+    private final ApplicationService applicationService;
+
+    @Autowired
+    public InterviewService(InterviewRepository interviewRepository,
+                            ApplicationRepository applicationRepository,
+                            ApplicationService applicationService) {
+        this.interviewRepository = interviewRepository;
+        this.applicationRepository = applicationRepository;
+        this.applicationService = applicationService;
     }
 
-    public Interview getInterviewById(Long id) throws SQLException {
-        return interviewDAO.findById(id)
+    public List<InterviewResponseDTO> getAllInterviews(Long applicationId, String result) {
+        InterviewResult interviewResult = null;
+        if (result != null && !result.isBlank() && !"ALL".equalsIgnoreCase(result)) {
+            interviewResult = InterviewResult.fromString(result);
+        }
+
+        List<Interview> interviews = interviewRepository.searchInterviews(applicationId, interviewResult);
+        return interviews.stream()
+                .map(InterviewResponseDTO::new)
+                .toList();
+    }
+
+    public InterviewResponseDTO getInterviewById(Long id) {
+        Interview interview = findEntityById(id);
+        return new InterviewResponseDTO(interview);
+    }
+
+    public Interview findEntityById(Long id) {
+        return interviewRepository.findByIdWithDetails(id)
+                .or(() -> interviewRepository.findById(id))
                 .orElseThrow(() -> new ResourceNotFoundException("Interview with ID " + id + " not found"));
     }
 
-    public Interview scheduleInterview(Interview interview) throws SQLException {
-        validateInterview(interview);
-
-        // Ensure application exists
-        Application app = applicationDAO.findById(interview.getApplicationId())
-                .orElseThrow(() -> new ValidationException("Application with ID " + interview.getApplicationId() + " not found"));
+    @Transactional
+    public InterviewResponseDTO scheduleInterview(InterviewRequestDTO dto) {
+        Application app = applicationRepository.findById(dto.getApplicationId())
+                .orElseThrow(() -> new ValidationException("Application with ID " + dto.getApplicationId() + " not found"));
 
         if (app.getStatus() == ApplicationStatus.REJECTED) {
             throw new ValidationException("Cannot schedule an interview for a rejected application");
         }
 
-        Interview created = interviewDAO.create(interview);
-        return getInterviewById(created.getId());
+        Interview interview = new Interview(
+                app,
+                dto.getRound(),
+                dto.getScheduledAt(),
+                dto.getMode(),
+                dto.getInterviewer(),
+                dto.getResult() != null ? dto.getResult() : InterviewResult.PENDING,
+                dto.getRemarks()
+        );
+
+        Interview saved = interviewRepository.save(interview);
+        return new InterviewResponseDTO(saved);
     }
 
-    public Interview updateInterview(Long id, Interview interview) throws SQLException {
-        Interview existing = getInterviewById(id);
-        interview.setId(id);
-        if (interview.getApplicationId() == null) {
-            interview.setApplicationId(existing.getApplicationId());
-        }
-        validateInterview(interview);
+    @Transactional
+    public InterviewResponseDTO updateInterview(Long id, InterviewRequestDTO dto) {
+        Interview existing = findEntityById(id);
 
-        interviewDAO.update(interview);
+        existing.setRound(dto.getRound());
+        existing.setScheduledAt(dto.getScheduledAt());
+        existing.setMode(dto.getMode());
+        existing.setInterviewer(dto.getInterviewer());
+        existing.setResult(dto.getResult() != null ? dto.getResult() : InterviewResult.PENDING);
+        existing.setRemarks(dto.getRemarks());
 
-        // REQUIREMENT 8: Interview results affect application progression
-        if (interview.getResult() == InterviewResult.PASSED) {
-            if (interview.getRound() == InterviewRound.HR) {
-                applicationService.updateStatus(existing.getApplicationId(), ApplicationStatus.SELECTED);
-            } else if (interview.getRound() == InterviewRound.TECHNICAL) {
-                applicationService.updateStatus(existing.getApplicationId(), ApplicationStatus.HR);
-            } else if (interview.getRound() == InterviewRound.APTITUDE) {
-                applicationService.updateStatus(existing.getApplicationId(), ApplicationStatus.TECHNICAL);
+        Interview updated = interviewRepository.save(existing);
+
+        // Interview results affect application progression
+        Long appId = existing.getApplication().getId();
+        if (existing.getResult() == InterviewResult.PASSED) {
+            if (existing.getRound() == InterviewRound.HR) {
+                applicationService.updateStatus(appId, ApplicationStatus.SELECTED);
+            } else if (existing.getRound() == InterviewRound.TECHNICAL) {
+                applicationService.updateStatus(appId, ApplicationStatus.HR);
+            } else if (existing.getRound() == InterviewRound.APTITUDE) {
+                applicationService.updateStatus(appId, ApplicationStatus.TECHNICAL);
             }
-        } else if (interview.getResult() == InterviewResult.FAILED) {
-            applicationService.updateStatus(existing.getApplicationId(), ApplicationStatus.REJECTED);
+        } else if (existing.getResult() == InterviewResult.FAILED) {
+            applicationService.updateStatus(appId, ApplicationStatus.REJECTED);
         }
 
-        return getInterviewById(id);
+        return new InterviewResponseDTO(updated);
     }
 
-    public void deleteInterview(Long id) throws SQLException {
-        getInterviewById(id);
-        interviewDAO.delete(id);
-    }
-
-    private void validateInterview(Interview i) {
-        if (i.getApplicationId() == null || i.getApplicationId() <= 0) {
-            throw new ValidationException("Application ID is required");
-        }
-        if (i.getRound() == null) {
-            throw new ValidationException("Interview round is required");
-        }
-        if (i.getScheduledAt() == null) {
-            throw new ValidationException("Scheduled date/time is required");
-        }
-        if (i.getMode() == null || i.getMode().isBlank()) {
-            throw new ValidationException("Interview mode (ONLINE/OFFLINE) is required");
-        }
+    @Transactional
+    public void deleteInterview(Long id) {
+        Interview interview = findEntityById(id);
+        interviewRepository.delete(interview);
     }
 }

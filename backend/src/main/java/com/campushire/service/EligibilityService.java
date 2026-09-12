@@ -1,28 +1,39 @@
 package com.campushire.service;
 
-import com.campushire.dao.JobDAO;
-import com.campushire.dao.StudentDAO;
 import com.campushire.dto.EligibilityResultDTO;
+import com.campushire.entity.Job;
+import com.campushire.entity.Student;
 import com.campushire.enums.JobStatus;
 import com.campushire.exception.ResourceNotFoundException;
-import com.campushire.model.Job;
-import com.campushire.model.Student;
+import com.campushire.repository.JobRepository;
+import com.campushire.repository.StudentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLException;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+@Service
+@Transactional(readOnly = true)
 public class EligibilityService {
-    private final StudentDAO studentDAO = new StudentDAO();
-    private final JobDAO jobDAO = new JobDAO();
 
-    public EligibilityResultDTO checkEligibility(Long jobId, Long studentId) throws SQLException {
-        Student student = studentDAO.findById(studentId)
+    private final StudentRepository studentRepository;
+    private final JobRepository jobRepository;
+
+    @Autowired
+    public EligibilityService(StudentRepository studentRepository, JobRepository jobRepository) {
+        this.studentRepository = studentRepository;
+        this.jobRepository = jobRepository;
+    }
+
+    public EligibilityResultDTO checkEligibility(Long jobId, Long studentId) {
+        Student student = studentRepository.findById(studentId)
                 .orElseThrow(() -> new ResourceNotFoundException("Student with ID " + studentId + " not found"));
 
-        Job job = jobDAO.findById(jobId)
+        Job job = jobRepository.findById(jobId)
                 .orElseThrow(() -> new ResourceNotFoundException("Job opening with ID " + jobId + " not found"));
 
         List<String> reasons = new ArrayList<>();
@@ -36,7 +47,7 @@ public class EligibilityService {
 
         // 2. Application Deadline check
         if (job.getApplicationDeadline() != null) {
-            LocalDate deadline = job.getApplicationDeadline().toLocalDate();
+            LocalDate deadline = job.getApplicationDeadline();
             LocalDate today = LocalDate.now();
             if (today.isAfter(deadline)) {
                 eligible = false;

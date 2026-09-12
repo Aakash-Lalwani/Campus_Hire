@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { RoleProvider } from './context/RoleContext';
 import Sidebar from './components/Sidebar';
@@ -13,13 +13,20 @@ import Interviews from './pages/Interviews';
 import StudentPortal from './pages/StudentPortal';
 
 export default function App() {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+
   return (
     <RoleProvider>
       <Router>
         <div className="app-layout">
-          <Sidebar />
+          <Sidebar 
+            isOpen={sidebarOpen} 
+            onClose={() => setSidebarOpen(false)} 
+          />
           <div className="main-wrapper">
-            <Topbar />
+            <Topbar 
+              onToggleSidebar={() => setSidebarOpen((prev) => !prev)} 
+            />
             <main className="main-content">
               <Routes>
                 <Route path="/" element={<Dashboard />} />

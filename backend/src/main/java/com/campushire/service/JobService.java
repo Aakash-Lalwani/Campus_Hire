@@ -1,71 +1,101 @@
 package com.campushire.service;
 
-import com.campushire.dao.CompanyDAO;
-import com.campushire.dao.JobDAO;
+import com.campushire.dto.JobRequestDTO;
+import com.campushire.dto.JobResponseDTO;
+import com.campushire.entity.Company;
+import com.campushire.entity.Job;
+import com.campushire.enums.JobStatus;
 import com.campushire.exception.ResourceNotFoundException;
 import com.campushire.exception.ValidationException;
-import com.campushire.model.Job;
+import com.campushire.repository.CompanyRepository;
+import com.campushire.repository.JobRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.sql.SQLException;
 import java.util.List;
 
+@Service
+@Transactional(readOnly = true)
 public class JobService {
-    private final JobDAO jobDAO = new JobDAO();
-    private final CompanyDAO companyDAO = new CompanyDAO();
 
-    public List<Job> getAllJobs(String search, Long companyId, String status) throws SQLException {
-        return jobDAO.findAll(search, companyId, status);
+    private final JobRepository jobRepository;
+    private final CompanyRepository companyRepository;
+
+    @Autowired
+    public JobService(JobRepository jobRepository, CompanyRepository companyRepository) {
+        this.jobRepository = jobRepository;
+        this.companyRepository = companyRepository;
     }
 
-    public Job getJobById(Long id) throws SQLException {
-        return jobDAO.findById(id)
+    public List<JobResponseDTO> getAllJobs(String search, Long companyId, String status) {
+        JobStatus jobStatus = null;
+        if (status != null && !status.isBlank() && !"ALL".equalsIgnoreCase(status)) {
+            jobStatus = JobStatus.fromString(status);
+        }
+
+        List<Job> jobs = jobRepository.searchJobs(search, companyId, jobStatus);
+        return jobs.stream()
+                .map(JobResponseDTO::new)
+                .toList();
+    }
+
+    public JobResponseDTO getJobById(Long id) {
+        Job job = findEntityById(id);
+        return new JobResponseDTO(job);
+    }
+
+    public Job findEntityById(Long id) {
+        return jobRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Job opening with ID " + id + " not found"));
     }
 
-    public Job createJob(Job job) throws SQLException {
-        validateJob(job);
-        // Verify company exists
-        companyDAO.findById(job.getCompanyId())
+    @Transactional
+    public JobResponseDTO createJob(JobRequestDTO dto) {
+        Company company = companyRepository.findById(dto.getCompanyId())
                 .orElseThrow(() -> new ValidationException("Invalid company ID: Company does not exist"));
-        return jobDAO.create(job);
+
+        Job job = new Job();
+        job.setCompany(company);
+        job.setRole(dto.getRole());
+        job.setDescription(dto.getDescription());
+        job.setPackageLpa(dto.getPackageLpa());
+        job.setMinCgpa(dto.getMinCgpa());
+        job.setAllowedBranches(dto.getAllowedBranches());
+        job.setMaxBacklogs(dto.getMaxBacklogs() != null ? dto.getMaxBacklogs() : 0);
+        job.setApplicationDeadline(dto.getApplicationDeadline());
+        job.setJobStatus(dto.getJobStatus() != null ? dto.getJobStatus() : JobStatus.OPEN);
+
+        Job saved = jobRepository.save(job);
+        return new JobResponseDTO(saved);
     }
 
-    public Job updateJob(Long id, Job job) throws SQLException {
-        getJobById(id);
-        job.setId(id);
-        validateJob(job);
-        companyDAO.findById(job.getCompanyId())
+    @Transactional
+    public JobResponseDTO updateJob(Long id, JobRequestDTO dto) {
+        Job job = findEntityById(id);
+
+        Company company = companyRepository.findById(dto.getCompanyId())
                 .orElseThrow(() -> new ValidationException("Invalid company ID: Company does not exist"));
-        jobDAO.update(job);
-        return getJobById(id);
+
+        job.setCompany(company);
+        job.setRole(dto.getRole());
+        job.setDescription(dto.getDescription());
+        job.setPackageLpa(dto.getPackageLpa());
+        job.setMinCgpa(dto.getMinCgpa());
+        job.setAllowedBranches(dto.getAllowedBranches());
+        job.setMaxBacklogs(dto.getMaxBacklogs() != null ? dto.getMaxBacklogs() : 0);
+        job.setApplicationDeadline(dto.getApplicationDeadline());
+        if (dto.getJobStatus() != null) {
+            job.setJobStatus(dto.getJobStatus());
+        }
+
+        Job updated = jobRepository.save(job);
+        return new JobResponseDTO(updated);
     }
 
-    public void deleteJob(Long id) throws SQLException {
-        getJobById(id);
-        jobDAO.delete(id);
-    }
-
-    private void validateJob(Job j) {
-        if (j.getCompanyId() == null || j.getCompanyId() <= 0) {
-            throw new ValidationException("Company ID is required");
-        }
-        if (j.getRole() == null || j.getRole().isBlank()) {
-            throw new ValidationException("Job role title is required");
-        }
-        if (j.getPackageLpa() == null || j.getPackageLpa() <= 0) {
-            throw new ValidationException("Package (LPA) must be greater than 0");
-        }
-        if (j.getMinCgpa() == null || j.getMinCgpa() < 0.0 || j.getMinCgpa() > 10.0) {
-            throw new ValidationException("Minimum CGPA must be between 0.0 and 10.0");
-        }
-        if (j.getAllowedBranches() == null || j.getAllowedBranches().isBlank()) {
-            throw new ValidationException("Allowed branches must be specified");
-        }
-        if (j.getMaxBacklogs() == null || j.getMaxBacklogs() < 0) {
-            throw new ValidationException("Max backlogs cannot be negative");
-        }
-        if (j.getApplicationDeadline() == null) {
-            throw new ValidationException("Application deadline date is required");
-        }
+    @Transactional
+    public void deleteJob(Long id) {
+        Job job = findEntityById(id);
+        jobRepository.delete(job);
     }
 }
