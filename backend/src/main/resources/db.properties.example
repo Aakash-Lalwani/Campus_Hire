@@ -1,0 +1,4 @@
+# CampusHire Database Configuration Example
+db.url=jdbc:mysql://localhost:3306/campushire?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+db.username=root
+db.password=root
